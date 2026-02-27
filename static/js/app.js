@@ -34,6 +34,12 @@ function updateAuthStatus(username) {
   }
 }
 
+function providerLabel(model) {
+  if (model.startsWith("ollama/")) return `Ollama · ${model.replace("ollama/", "")}`;
+  if (model.startsWith("anthropic/")) return `Anthropic · ${model.replace("anthropic/", "")}`;
+  return model;
+}
+
 // --- Auth ---
 document.getElementById("auth-form").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -51,9 +57,7 @@ document.getElementById("auth-form").addEventListener("submit", async (e) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
     });
-
     const data = await res.json();
-
     if (!res.ok) {
       showResult(resultEl, `<strong>Error ${res.status}:</strong> ${data.detail || "Login failed"}`, "error");
       authToken = null;
@@ -90,6 +94,7 @@ document.getElementById("rag-form").addEventListener("submit", async (e) => {
   const btn = e.target.querySelector("button[type=submit]");
   const resultEl = document.getElementById("rag-result");
   const query = document.getElementById("rag-query").value.trim();
+  const model = document.getElementById("rag-model").value;
   if (!query) return;
 
   setLoading(btn, true, "Search");
@@ -99,21 +104,17 @@ document.getElementById("rag-form").addEventListener("submit", async (e) => {
     const res = await fetch(`${BASE_URL}/api/rag/query`, {
       method: "POST",
       headers: getAuthHeaders(),
-      body: JSON.stringify({ query }),
+      body: JSON.stringify({ query, model }),
     });
-
     const data = await res.json();
-
     if (!res.ok) {
       showResult(resultEl, `<strong>Error ${res.status}:</strong> ${data.detail || "RAG query failed"}`, "error");
     } else {
-      const docsHtml = data.context_documents
-        .map((d) => `<li>${d}</li>`)
-        .join("");
+      const docsHtml = data.context_documents.map((d) => `<li>${d}</li>`).join("");
       showResult(resultEl, `
         <div class="answer-text">${data.answer}</div>
         <div class="context-docs">
-          <h4>Retrieved Context (${data.model})</h4>
+          <h4>Retrieved Context · <span style="color:#60a5fa">${providerLabel(data.model)}</span></h4>
           <ul>${docsHtml}</ul>
         </div>
       `, "success");
@@ -127,11 +128,17 @@ document.getElementById("rag-form").addEventListener("submit", async (e) => {
 });
 
 // --- Chat ---
-function addChatBubble(role, content) {
+function addChatBubble(role, content, model) {
   const chatMessages = document.getElementById("chat-messages");
   const div = document.createElement("div");
   div.className = `chat-bubble ${role}`;
   div.textContent = content;
+  if (model && role === "assistant") {
+    const tag = document.createElement("div");
+    tag.className = "bubble-model";
+    tag.textContent = providerLabel(model);
+    div.appendChild(tag);
+  }
   chatMessages.appendChild(div);
   document.getElementById("chat-window").scrollTop = 9999;
 }
@@ -148,6 +155,7 @@ document.getElementById("chat-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const btn = e.target.querySelector("button[type=submit]");
   const input = document.getElementById("chat-input");
+  const model = document.getElementById("chat-model").value;
   const message = input.value.trim();
   if (!message) return;
 
@@ -159,16 +167,14 @@ document.getElementById("chat-form").addEventListener("submit", async (e) => {
     const res = await fetch(`${BASE_URL}/api/chat/message`, {
       method: "POST",
       headers: getAuthHeaders(),
-      body: JSON.stringify({ message, history: chatHistory }),
+      body: JSON.stringify({ message, history: chatHistory, model }),
     });
-
     const data = await res.json();
-
     if (!res.ok) {
       addSystemMessage(`Error ${res.status}: ${data.detail || "Chat failed"}`);
     } else {
       chatHistory = data.history;
-      addChatBubble("assistant", data.message);
+      addChatBubble("assistant", data.message, data.model);
     }
   } catch (err) {
     addSystemMessage(`Network error: ${err.message}`);

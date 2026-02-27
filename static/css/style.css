@@ -77,6 +77,47 @@ main {
   margin-bottom: 0.35rem;
 }
 
+.form-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  margin-bottom: 0.875rem;
+}
+
+.form-row .form-group { margin-bottom: 0; }
+.form-row .flex-1 { flex: 1; }
+
+.model-select {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  color: #e2e8f0;
+  font-size: 0.875rem;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  white-space: nowrap;
+}
+
+.model-select:focus { border-color: #6366f1; }
+
+.model-selector-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.875rem;
+}
+
+.model-selector-row label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
 input[type="text"],
 input[type="password"] {
   width: 100%;
@@ -240,6 +281,13 @@ input[type="password"]:focus {
   color: #e2e8f0;
   align-self: flex-start;
   border-bottom-left-radius: 0.125rem;
+}
+
+.bubble-model {
+  font-size: 0.68rem;
+  color: #60a5fa;
+  margin-top: 0.35rem;
+  opacity: 0.8;
 }
 
 .chat-bubble.system {

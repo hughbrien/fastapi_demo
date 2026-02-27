@@ -1,15 +1,21 @@
-import math
-import httpx
 from fastapi import APIRouter, HTTPException, Header
 from pydantic import BaseModel
 from typing import Optional
 from opentelemetry import trace
+from litellm import acompletion
+import litellm
 
 router = APIRouter()
 tracer = trace.get_tracer(__name__)
 
 OLLAMA_BASE_URL = "http://localhost:11434"
-RAG_MODEL = "qwen2.5:latest"
+
+AVAILABLE_MODELS = {
+    "ollama/qwen2.5:latest":               {"api_base": OLLAMA_BASE_URL},
+    "anthropic/claude-haiku-4-5-20251001": {},
+    "anthropic/claude-sonnet-4-6":         {},
+}
+DEFAULT_MODEL = "ollama/qwen2.5:latest"
 
 corpus_of_documents = [
     "Take a leisurely walk in the park and enjoy the fresh air.",
@@ -32,23 +38,19 @@ def tokenize(text: str) -> set:
 def jaccard_similarity(query_tokens: set, doc_tokens: set) -> float:
     intersection = query_tokens & doc_tokens
     union = query_tokens | doc_tokens
-    if not union:
-        return 0.0
-    return len(intersection) / len(union)
+    return len(intersection) / len(union) if union else 0.0
 
 
 def find_relevant_documents(query: str, top_k: int = 3) -> list[tuple[str, float]]:
     query_tokens = tokenize(query)
-    scored = [
-        (doc, jaccard_similarity(query_tokens, tokenize(doc)))
-        for doc in corpus_of_documents
-    ]
+    scored = [(doc, jaccard_similarity(query_tokens, tokenize(doc))) for doc in corpus_of_documents]
     scored.sort(key=lambda x: x[1], reverse=True)
     return scored[:top_k]
 
 
 class RagRequest(BaseModel):
     query: str
+    model: str = DEFAULT_MODEL
 
 
 class RagResponse(BaseModel):
@@ -58,59 +60,59 @@ class RagResponse(BaseModel):
     model: str
 
 
+@router.get("/models")
+async def list_models():
+    return {"models": list(AVAILABLE_MODELS.keys()), "default": DEFAULT_MODEL}
+
+
 @router.post("/query", response_model=RagResponse)
 async def rag_query(
     request: RagRequest,
     authorization: Optional[str] = Header(None),
 ):
+    if request.model not in AVAILABLE_MODELS:
+        raise HTTPException(status_code=400, detail=f"Unknown model '{request.model}'. Available: {list(AVAILABLE_MODELS)}")
+
     with tracer.start_as_current_span("rag.query") as span:
         span.set_attribute("rag.query", request.query)
-        span.set_attribute("rag.model", RAG_MODEL)
+        span.set_attribute("rag.model", request.model)
 
-        # Retrieve relevant documents
         relevant_docs = find_relevant_documents(request.query)
         context = "\n".join(f"- {doc}" for doc, _ in relevant_docs)
         context_list = [doc for doc, _ in relevant_docs]
-
         span.set_attribute("rag.num_docs_retrieved", len(relevant_docs))
 
-        prompt = (
-            f"You are a helpful assistant. Use the following context to answer the question.\n\n"
-            f"Context:\n{context}\n\n"
-            f"Question: {request.query}\n\n"
-            f"Answer:"
-        )
+        messages = [{
+            "role": "user",
+            "content": (
+                f"You are a helpful assistant. Use the following context to answer the question.\n\n"
+                f"Context:\n{context}\n\n"
+                f"Question: {request.query}\n\nAnswer:"
+            ),
+        }]
 
-        span.add_event("Calling Ollama RAG model", {"model": RAG_MODEL, "url": OLLAMA_BASE_URL})
+        model_kwargs = AVAILABLE_MODELS[request.model]
+        span.add_event("Calling LiteLLM RAG model", {"model": request.model})
 
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            try:
-                response = await client.post(
-                    f"{OLLAMA_BASE_URL}/api/generate",
-                    json={
-                        "model": RAG_MODEL,
-                        "prompt": prompt,
-                        "stream": False,
-                    },
-                )
-                response.raise_for_status()
-                result = response.json()
-                answer = result.get("response", "").strip()
-                span.set_attribute("rag.answer_length", len(answer))
-            except httpx.ConnectError:
-                raise HTTPException(
-                    status_code=503,
-                    detail=f"Cannot connect to Ollama at {OLLAMA_BASE_URL}. Ensure Ollama is running."
-                )
-            except httpx.HTTPStatusError as e:
-                raise HTTPException(
-                    status_code=502,
-                    detail=f"Ollama returned error: {e.response.status_code}"
-                )
+        try:
+            response = await acompletion(
+                model=request.model,
+                messages=messages,
+                timeout=60.0,
+                **model_kwargs,
+            )
+            answer = response.choices[0].message.content.strip()
+            span.set_attribute("rag.answer_length", len(answer))
+        except litellm.exceptions.APIConnectionError:
+            raise HTTPException(status_code=503, detail=f"Cannot connect to model provider for '{request.model}'.")
+        except litellm.exceptions.AuthenticationError:
+            raise HTTPException(status_code=401, detail="Invalid or missing API key for the selected provider.")
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=str(e))
 
         return RagResponse(
             query=request.query,
             answer=answer,
             context_documents=context_list,
-            model=RAG_MODEL,
+            model=request.model,
         )

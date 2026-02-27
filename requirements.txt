@@ -112,6 +112,7 @@ starlette==0.52.1
 tenacity==9.1.4
 tokenizers==0.22.2
 tqdm==4.67.3
+litellm==1.81.16
 traceloop-sdk==0.52.6
 typer==0.24.1
 typing-inspection==0.4.2

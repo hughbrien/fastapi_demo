@@ -36,12 +36,22 @@
 
     <!-- RAG Section -->
     <section id="section-rag" class="card">
-      <h2>RAG Query <span class="model-badge">qwen2.5:latest</span></h2>
-      <p class="description">Query the knowledge base using Retrieval-Augmented Generation.</p>
+      <h2>RAG Query</h2>
+      <p class="description">Query the knowledge base using Retrieval-Augmented Generation via LiteLLM.</p>
       <form id="rag-form">
-        <div class="form-group">
-          <label for="rag-query">Query</label>
-          <input type="text" id="rag-query" placeholder="e.g. What outdoor activities can I do?" />
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="rag-query">Query</label>
+            <input type="text" id="rag-query" placeholder="e.g. What outdoor activities can I do?" />
+          </div>
+          <div class="form-group">
+            <label for="rag-model">Model</label>
+            <select id="rag-model" class="model-select">
+              <option value="ollama/qwen2.5:latest">Ollama · qwen2.5</option>
+              <option value="anthropic/claude-haiku-4-5-20251001">Anthropic · claude-haiku</option>
+              <option value="anthropic/claude-sonnet-4-6">Anthropic · claude-sonnet</option>
+            </select>
+          </div>
         </div>
         <button type="submit" class="btn btn-primary">Search</button>
       </form>
@@ -50,8 +60,16 @@
 
     <!-- Chat Section -->
     <section id="section-chat" class="card">
-      <h2>AI Chat <span class="model-badge">llama3.2:latest</span></h2>
-      <p class="description">Conversational AI powered by Ollama.</p>
+      <h2>AI Chat</h2>
+      <p class="description">Conversational AI via LiteLLM — switch providers without clearing your chat.</p>
+      <div class="model-selector-row">
+        <label for="chat-model">Model</label>
+        <select id="chat-model" class="model-select">
+          <option value="ollama/llama3.2:latest">Ollama · llama3.2</option>
+          <option value="anthropic/claude-haiku-4-5-20251001">Anthropic · claude-haiku</option>
+          <option value="anthropic/claude-sonnet-4-6">Anthropic · claude-sonnet</option>
+        </select>
+      </div>
       <div id="chat-window">
         <div id="chat-messages"></div>
       </div>
