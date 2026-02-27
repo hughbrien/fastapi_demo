@@ -19,16 +19,13 @@ Traceloop.init(
     api_endpoint=os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318"),
     disable_batch=False,
 )
-
 span = trace.get_current_span()
 ctx = span.get_span_context()
 span.set_attribute("Starting App Version", "1.0.0")
 
-
-
-
 app = FastAPI(title="FastAPI Demo Service", version="1.0.0")
 
+# The following is the patch
 FastAPIInstrumentor.instrument_app(app)
 HTTPXClientInstrumentor().instrument()
 
