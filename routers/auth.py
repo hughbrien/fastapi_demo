@@ -46,7 +46,7 @@ async def login(request: LoginRequest):
             try:
                 # Attempt to call the mock remote auth service
                 response = await client.post(
-                    MOCK_REMOTE_AUTH_URL,
+                        MOCK_REMOTE_AUTH_URL,
                     json={"username": request.username, "password": request.password}
                 )
                 span.add_event("Remote auth service responded", {"status": response.status_code})

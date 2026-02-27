@@ -13,6 +13,10 @@ Create a basic User Interface that will call the following services with a simpl
 -   Rag Service Call to Ollama  qwen2.5:latest  
 -   AI Chat API call to Ollama  llama3.2:latest
 
+Use  LiteLLM with both the Rag and Chat calls.  
+Add Anthopic as an additional LLM / AI  
+
+
 ### Observaiblity 
 Provide observability usign TraceLoop.
 There is a local otel collector : otelcontribcol is running with basic configuration 
