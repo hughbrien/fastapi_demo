@@ -5,6 +5,11 @@ from fastapi.templating import Jinja2Templates
 from fastapi.requests import Request
 from fastapi.responses import HTMLResponse
 from traceloop.sdk import Traceloop
+from opentelemetry import trace
+
+
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 
 from routers import auth, rag, chat
 
@@ -15,7 +20,18 @@ Traceloop.init(
     disable_batch=False,
 )
 
+span = trace.get_current_span()
+ctx = span.get_span_context()
+span.set_attribute("Starting App Version", "1.0.0")
+
+
+
+
 app = FastAPI(title="FastAPI Demo Service", version="1.0.0")
+
+FastAPIInstrumentor.instrument_app(app)
+HTTPXClientInstrumentor().instrument()
+
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
