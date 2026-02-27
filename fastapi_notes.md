@@ -21,6 +21,8 @@ Uvicorn starts an event loop, binds to the port, and feeds incoming HTTP request
 
 FastAPI is an **ASGI web framework** that runs on top of Uvicorn (or any ASGI server). It's built on two libraries: **Starlette** (the ASGI toolkit/routing layer) and **Pydantic** (data validation/serialization).
 
+**ASGI (Asynchronous Server Gateway Interface)** is a spiritual successor to WSGI, intended to provide a standard interface between async-capable Python web servers, frameworks, and applications.
+\
 Key characteristics:
 
 - Fully async-native, though it also supports sync route handlers
