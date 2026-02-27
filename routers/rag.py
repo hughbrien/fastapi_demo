@@ -73,46 +73,41 @@ async def rag_query(
     if request.model not in AVAILABLE_MODELS:
         raise HTTPException(status_code=400, detail=f"Unknown model '{request.model}'. Available: {list(AVAILABLE_MODELS)}")
 
-    with tracer.start_as_current_span("rag.query") as span:
-        span.set_attribute("rag.query", request.query)
-        span.set_attribute("rag.model", request.model)
 
-        relevant_docs = find_relevant_documents(request.query)
-        context = "\n".join(f"- {doc}" for doc, _ in relevant_docs)
-        context_list = [doc for doc, _ in relevant_docs]
-        span.set_attribute("rag.num_docs_retrieved", len(relevant_docs))
 
-        messages = [{
-            "role": "user",
-            "content": (
-                f"You are a helpful assistant. Use the following context to answer the question.\n\n"
-                f"Context:\n{context}\n\n"
-                f"Question: {request.query}\n\nAnswer:"
-            ),
-        }]
+    relevant_docs = find_relevant_documents(request.query)
+    context = "\n".join(f"- {doc}" for doc, _ in relevant_docs)
+    context_list = [doc for doc, _ in relevant_docs]
 
-        model_kwargs = AVAILABLE_MODELS[request.model]
-        span.add_event("Calling LiteLLM RAG model", {"model": request.model})
+    messages = [{
+        "role": "user",
+        "content": (
+            f"You are a helpful assistant. Use the following context to answer the question.\n\n"
+            f"Context:\n{context}\n\n"
+            f"Question: {request.query}\n\nAnswer:"
+        ),
+    }]
 
-        try:
-            response = await acompletion(
-                model=request.model,
-                messages=messages,
-                timeout=60.0,
-                **model_kwargs,
-            )
-            answer = response.choices[0].message.content.strip()
-            span.set_attribute("rag.answer_length", len(answer))
-        except litellm.exceptions.APIConnectionError:
-            raise HTTPException(status_code=503, detail=f"Cannot connect to model provider for '{request.model}'.")
-        except litellm.exceptions.AuthenticationError:
-            raise HTTPException(status_code=401, detail="Invalid or missing API key for the selected provider.")
-        except Exception as e:
-            raise HTTPException(status_code=502, detail=str(e))
+    model_kwargs = AVAILABLE_MODELS[request.model]
 
-        return RagResponse(
-            query=request.query,
-            answer=answer,
-            context_documents=context_list,
+    try:
+        response = await acompletion(
             model=request.model,
+            messages=messages,
+            timeout=60.0,
+            **model_kwargs,
         )
+        answer = response.choices[0].message.content.strip()
+    except litellm.exceptions.APIConnectionError:
+        raise HTTPException(status_code=503, detail=f"Cannot connect to model provider for '{request.model}'.")
+    except litellm.exceptions.AuthenticationError:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key for the selected provider.")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+    return RagResponse(
+        query=request.query,
+        answer=answer,
+        context_documents=context_list,
+        model=request.model,
+    )

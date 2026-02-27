@@ -48,40 +48,34 @@ async def chat_message(
     if request.model not in AVAILABLE_MODELS:
         raise HTTPException(status_code=400, detail=f"Unknown model '{request.model}'. Available: {list(AVAILABLE_MODELS)}")
 
-    with tracer.start_as_current_span("chat.message") as span:
-        span.set_attribute("chat.model", request.model)
-        span.set_attribute("chat.history_length", len(request.history))
-        span.set_attribute("chat.message_length", len(request.message))
+    messages = [{"role": msg.role, "content": msg.content} for msg in request.history]
+    messages.append({"role": "user", "content": request.message})
 
-        messages = [{"role": msg.role, "content": msg.content} for msg in request.history]
-        messages.append({"role": "user", "content": request.message})
+    model_kwargs = AVAILABLE_MODELS[request.model]
 
-        model_kwargs = AVAILABLE_MODELS[request.model]
-        span.add_event("Calling LiteLLM chat model", {"model": request.model})
-
-        try:
-            response = await acompletion(
-                model=request.model,
-                messages=messages,
-                timeout=120.0,
-                **model_kwargs,
-            )
-            assistant_content = response.choices[0].message.content.strip()
-            span.set_attribute("chat.response_length", len(assistant_content))
-        except litellm.exceptions.APIConnectionError:
-            raise HTTPException(status_code=503, detail=f"Cannot connect to model provider for '{request.model}'.")
-        except litellm.exceptions.AuthenticationError:
-            raise HTTPException(status_code=401, detail="Invalid or missing API key for the selected provider.")
-        except Exception as e:
-            raise HTTPException(status_code=502, detail=str(e))
-
-        updated_history = list(request.history) + [
-            ChatMessage(role="user", content=request.message),
-            ChatMessage(role="assistant", content=assistant_content),
-        ]
-
-        return ChatResponse(
-            message=assistant_content,
+    try:
+        response = await acompletion(
             model=request.model,
-            history=updated_history,
+            messages=messages,
+            timeout=120.0,
+            **model_kwargs,
         )
+        assistant_content = response.choices[0].message.content.strip()
+
+    except litellm.exceptions.APIConnectionError:
+        raise HTTPException(status_code=503, detail=f"Cannot connect to model provider for '{request.model}'.")
+    except litellm.exceptions.AuthenticationError:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key for the selected provider.")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+    updated_history = list(request.history) + [
+        ChatMessage(role="user", content=request.message),
+        ChatMessage(role="assistant", content=assistant_content),
+    ]
+
+    return ChatResponse(
+        message=assistant_content,
+        model=request.model,
+        history=updated_history,
+    )
