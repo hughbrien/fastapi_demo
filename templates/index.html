@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FastAPI Demo</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <header>
+    <h1>FastAPI Demo Service</h1>
+    <div id="auth-status">
+      <span id="auth-badge" class="badge badge-inactive">Not Authenticated</span>
+      <button id="logout-btn" class="btn btn-sm btn-danger hidden">Logout</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Auth Section -->
+    <section id="section-auth" class="card">
+      <h2>Authentication</h2>
+      <p class="description">Mock authentication service. Returns a JWT Bearer token.</p>
+      <form id="auth-form">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" placeholder="admin / user / demo" value="admin" />
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="password123 / secret / demo" value="password123" />
+        </div>
+        <button type="submit" class="btn btn-primary">Login</button>
+      </form>
+      <div id="auth-result" class="result hidden"></div>
+    </section>
+
+    <!-- RAG Section -->
+    <section id="section-rag" class="card">
+      <h2>RAG Query <span class="model-badge">qwen2.5:latest</span></h2>
+      <p class="description">Query the knowledge base using Retrieval-Augmented Generation.</p>
+      <form id="rag-form">
+        <div class="form-group">
+          <label for="rag-query">Query</label>
+          <input type="text" id="rag-query" placeholder="e.g. What outdoor activities can I do?" />
+        </div>
+        <button type="submit" class="btn btn-primary">Search</button>
+      </form>
+      <div id="rag-result" class="result hidden"></div>
+    </section>
+
+    <!-- Chat Section -->
+    <section id="section-chat" class="card">
+      <h2>AI Chat <span class="model-badge">llama3.2:latest</span></h2>
+      <p class="description">Conversational AI powered by Ollama.</p>
+      <div id="chat-window">
+        <div id="chat-messages"></div>
+      </div>
+      <form id="chat-form">
+        <div class="chat-input-row">
+          <input type="text" id="chat-input" placeholder="Type a message..." />
+          <button type="submit" class="btn btn-primary">Send</button>
+          <button type="button" id="clear-chat-btn" class="btn btn-secondary">Clear</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
